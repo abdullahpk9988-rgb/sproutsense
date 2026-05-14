@@ -1,0 +1,656 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SproutSense — Plant Health AI</title>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --green-deep: #0d2b1a;
+      --green-mid: #1a4d2e;
+      --green-bright: #2ecc71;
+      --green-light: #a8f5c2;
+      --cream: #f5f0e8;
+      --cream-dark: #e8e0d0;
+      --text-dark: #0d1f0f;
+      --text-mid: #3d5c42;
+      --text-light: #7a9e80;
+      --red: #e74c3c;
+      --amber: #f39c12;
+      --white: #ffffff;
+    }
+
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: var(--green-deep);
+      color: var(--cream);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    /* ── Header ── */
+    header {
+      width: 100%;
+      padding: 2rem 2rem 0;
+      text-align: center;
+    }
+
+    .logo {
+      font-family: 'DM Serif Display', serif;
+      font-size: clamp(2rem, 5vw, 3.2rem);
+      color: var(--green-bright);
+      letter-spacing: -0.5px;
+    }
+
+    .logo span { color: var(--cream); }
+
+    .tagline {
+      font-size: 0.95rem;
+      color: var(--green-light);
+      opacity: 0.7;
+      margin-top: 0.4rem;
+      font-weight: 300;
+      letter-spacing: 0.5px;
+    }
+
+    /* ── Main card ── */
+    .card {
+      background: var(--cream);
+      color: var(--text-dark);
+      border-radius: 24px;
+      width: min(520px, calc(100% - 2rem));
+      margin: 2.5rem auto 3rem;
+      overflow: hidden;
+      box-shadow: 0 32px 80px rgba(0,0,0,0.4);
+    }
+
+    /* ── Upload zone ── */
+    .upload-zone {
+      padding: 2.5rem 2rem;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 1.2rem;
+    }
+
+    .drop-area {
+      width: 100%;
+      border: 2px dashed var(--cream-dark);
+      border-radius: 16px;
+      padding: 2.5rem 1rem;
+      text-align: center;
+      cursor: pointer;
+      transition: border-color 0.2s, background 0.2s;
+      position: relative;
+      background: #faf8f4;
+    }
+
+    .drop-area:hover, .drop-area.drag-over {
+      border-color: var(--green-bright);
+      background: #f0faf4;
+    }
+
+    .drop-area input[type="file"] {
+      position: absolute;
+      inset: 0;
+      opacity: 0;
+      cursor: pointer;
+      width: 100%;
+      height: 100%;
+    }
+
+    .drop-icon {
+      font-size: 3rem;
+      margin-bottom: 0.5rem;
+      display: block;
+    }
+
+    .drop-text {
+      font-size: 1rem;
+      color: var(--text-mid);
+      font-weight: 500;
+    }
+
+    .drop-sub {
+      font-size: 0.8rem;
+      color: var(--text-light);
+      margin-top: 0.3rem;
+    }
+
+    /* Preview image */
+    #preview-wrap {
+      display: none;
+      width: 100%;
+      border-radius: 12px;
+      overflow: hidden;
+      position: relative;
+    }
+
+    #preview-img {
+      width: 100%;
+      max-height: 260px;
+      object-fit: cover;
+      display: block;
+    }
+
+    .preview-change {
+      position: absolute;
+      bottom: 10px;
+      right: 10px;
+      background: rgba(0,0,0,0.55);
+      color: #fff;
+      border: none;
+      border-radius: 20px;
+      padding: 6px 14px;
+      font-size: 0.78rem;
+      cursor: pointer;
+      font-family: 'DM Sans', sans-serif;
+    }
+
+    /* Analyze button */
+    .btn-analyze {
+      width: 100%;
+      padding: 1rem;
+      background: var(--green-mid);
+      color: var(--white);
+      border: none;
+      border-radius: 14px;
+      font-size: 1.05rem;
+      font-weight: 500;
+      font-family: 'DM Sans', sans-serif;
+      cursor: pointer;
+      transition: background 0.2s, transform 0.1s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+    }
+
+    .btn-analyze:hover:not(:disabled) { background: #143d24; }
+    .btn-analyze:active:not(:disabled) { transform: scale(0.98); }
+    .btn-analyze:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    /* ── Loading state ── */
+    #loading {
+      display: none;
+      padding: 2rem;
+      text-align: center;
+      border-top: 1px solid var(--cream-dark);
+    }
+
+    .spinner {
+      width: 40px;
+      height: 40px;
+      border: 3px solid var(--cream-dark);
+      border-top-color: var(--green-bright);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin: 0 auto 1rem;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .loading-text {
+      color: var(--text-mid);
+      font-size: 0.9rem;
+    }
+
+    .loading-steps {
+      margin-top: 0.5rem;
+      font-size: 0.8rem;
+      color: var(--text-light);
+    }
+
+    /* ── Results ── */
+    #results {
+      display: none;
+      border-top: 1px solid var(--cream-dark);
+    }
+
+    .results-header {
+      background: var(--green-mid);
+      color: var(--white);
+      padding: 1.2rem 1.5rem;
+      display: flex;
+      align-items: center;
+      gap: 0.8rem;
+    }
+
+    .results-header .plant-icon { font-size: 1.8rem; }
+
+    .plant-name {
+      font-family: 'DM Serif Display', serif;
+      font-size: 1.3rem;
+      line-height: 1.2;
+    }
+
+    .scientific-name {
+      font-size: 0.8rem;
+      opacity: 0.7;
+      font-style: italic;
+      margin-top: 2px;
+    }
+
+    .confidence-badge {
+      margin-left: auto;
+      background: rgba(255,255,255,0.15);
+      border-radius: 20px;
+      padding: 4px 10px;
+      font-size: 0.75rem;
+      white-space: nowrap;
+    }
+
+    /* Status chips */
+    .chips-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0;
+      border-bottom: 1px solid var(--cream-dark);
+    }
+
+    .chip {
+      padding: 1.1rem 1.2rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.3rem;
+    }
+
+    .chip:first-child { border-right: 1px solid var(--cream-dark); }
+
+    .chip-label {
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--text-light);
+      font-weight: 500;
+    }
+
+    .chip-value {
+      font-size: 1rem;
+      font-weight: 500;
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+
+    .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      display: inline-block;
+      flex-shrink: 0;
+    }
+
+    .dot-green { background: #2ecc71; }
+    .dot-amber { background: #f39c12; }
+    .dot-red   { background: #e74c3c; }
+
+    /* Tip section */
+    .tip-section {
+      padding: 1.2rem 1.5rem;
+      border-bottom: 1px solid var(--cream-dark);
+    }
+
+    .tip-label {
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--text-light);
+      font-weight: 500;
+      margin-bottom: 0.4rem;
+    }
+
+    .tip-text {
+      font-size: 0.92rem;
+      color: var(--text-mid);
+      line-height: 1.5;
+    }
+
+    /* Pro paywall */
+    .paywall {
+      margin: 1.2rem 1.5rem;
+      background: linear-gradient(135deg, var(--green-deep), var(--green-mid));
+      border-radius: 14px;
+      padding: 1.2rem 1.4rem;
+      color: var(--white);
+    }
+
+    .paywall-title {
+      font-size: 0.95rem;
+      font-weight: 500;
+      margin-bottom: 0.3rem;
+    }
+
+    .paywall-sub {
+      font-size: 0.8rem;
+      opacity: 0.7;
+      line-height: 1.4;
+      margin-bottom: 0.9rem;
+    }
+
+    .btn-pro {
+      background: var(--green-bright);
+      color: var(--green-deep);
+      border: none;
+      border-radius: 10px;
+      padding: 0.6rem 1.2rem;
+      font-size: 0.85rem;
+      font-weight: 500;
+      font-family: 'DM Sans', sans-serif;
+      cursor: pointer;
+    }
+
+    /* Disease box */
+    .disease-box {
+      margin: 0 1.5rem 1.2rem;
+      background: #fff5f5;
+      border: 1px solid #fcc;
+      border-radius: 12px;
+      padding: 1rem 1.2rem;
+    }
+
+    .disease-title {
+      font-size: 0.85rem;
+      font-weight: 500;
+      color: var(--red);
+      margin-bottom: 0.3rem;
+    }
+
+    .disease-treatment {
+      font-size: 0.82rem;
+      color: #7a3030;
+      line-height: 1.6;
+      white-space: pre-line;
+    }
+
+    /* Reset button */
+    .btn-reset {
+      width: calc(100% - 3rem);
+      margin: 0 1.5rem 1.5rem;
+      padding: 0.7rem;
+      background: transparent;
+      border: 1px solid var(--cream-dark);
+      border-radius: 10px;
+      color: var(--text-light);
+      font-size: 0.85rem;
+      font-family: 'DM Sans', sans-serif;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+
+    .btn-reset:hover { background: var(--cream-dark); }
+
+    /* Error */
+    #error-box {
+      display: none;
+      margin: 1rem 1.5rem;
+      background: #fff5f5;
+      border: 1px solid #fcc;
+      border-radius: 12px;
+      padding: 1rem 1.2rem;
+      color: var(--red);
+      font-size: 0.88rem;
+    }
+
+    /* Footer */
+    footer {
+      color: rgba(255,255,255,0.2);
+      font-size: 0.75rem;
+      padding-bottom: 2rem;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="logo">🌿 Sprout<span>Sense</span></div>
+  <p class="tagline">AI-powered plant health diagnostics</p>
+</header>
+
+<div class="card">
+
+  <!-- Upload Zone -->
+  <div class="upload-zone">
+
+    <div class="drop-area" id="drop-area">
+      <input type="file" id="file-input" accept="image/*">
+      <span class="drop-icon">📷</span>
+      <div class="drop-text">Tap to upload a plant photo</div>
+      <div class="drop-sub">JPG, PNG or WEBP — max 10MB</div>
+    </div>
+
+    <div id="preview-wrap">
+      <img id="preview-img" src="" alt="Plant preview">
+      <button class="preview-change" onclick="resetUpload()">Change photo</button>
+    </div>
+
+    <button class="btn-analyze" id="btn-analyze" disabled onclick="analyze()">
+      🔍 Analyze Plant
+    </button>
+
+    <div id="error-box"></div>
+
+  </div>
+
+  <!-- Loading -->
+  <div id="loading">
+    <div class="spinner"></div>
+    <div class="loading-text">Analyzing your plant...</div>
+    <div class="loading-steps" id="loading-step">Sending image to AI</div>
+  </div>
+
+  <!-- Results -->
+  <div id="results">
+
+    <div class="results-header">
+      <span class="plant-icon">🌱</span>
+      <div>
+        <div class="plant-name" id="res-name">—</div>
+        <div class="scientific-name" id="res-sci">—</div>
+      </div>
+      <div class="confidence-badge" id="res-conf">—% match</div>
+    </div>
+
+    <div class="chips-row">
+      <div class="chip">
+        <div class="chip-label">💧 Watering</div>
+        <div class="chip-value" id="res-water">—</div>
+      </div>
+      <div class="chip">
+        <div class="chip-label">❤️ Health</div>
+        <div class="chip-value" id="res-health">—</div>
+      </div>
+    </div>
+
+    <div class="tip-section">
+      <div class="tip-label">💡 Quick tip</div>
+      <div class="tip-text" id="res-tip">—</div>
+    </div>
+
+    <!-- Disease box (shown if disease found) -->
+    <div class="disease-box" id="disease-box" style="display:none">
+      <div class="disease-title" id="disease-title">⚠️ Disease Detected</div>
+      <div class="disease-treatment" id="disease-treatment">—</div>
+    </div>
+
+    <!-- Pro paywall -->
+    <div class="paywall" id="paywall-box">
+      <div class="paywall-title">🔒 Unlock Full Diagnosis</div>
+      <div class="paywall-sub">Get detailed disease diagnosis, treatment plans, soil & sunlight requirements, and unlimited scans.</div>
+      <button class="btn-pro">Upgrade to Pro — $4.99/mo</button>
+    </div>
+
+    <button class="btn-reset" onclick="resetAll()">↩ Scan another plant</button>
+
+  </div>
+
+</div>
+
+<footer>SproutSense · Powered by AI Vision · For demo purposes</footer>
+
+<script>
+  // ---- LIVE SERVER URL ----
+  const API_URL = 'https://sproutsense-production.up.railway.app/analyze';
+
+  const fileInput   = document.getElementById('file-input');
+  const dropArea    = document.getElementById('drop-area');
+  const previewWrap = document.getElementById('preview-wrap');
+  const previewImg  = document.getElementById('preview-img');
+  const btnAnalyze  = document.getElementById('btn-analyze');
+  const loading     = document.getElementById('loading');
+  const loadingStep = document.getElementById('loading-step');
+  const results     = document.getElementById('results');
+  const errorBox    = document.getElementById('error-box');
+
+  let selectedFile = null;
+
+  // File selected
+  fileInput.addEventListener('change', e => {
+    const file = e.target.files[0];
+    if (file) loadPreview(file);
+  });
+
+  // Drag and drop
+  dropArea.addEventListener('dragover', e => { e.preventDefault(); dropArea.classList.add('drag-over'); });
+  dropArea.addEventListener('dragleave', () => dropArea.classList.remove('drag-over'));
+  dropArea.addEventListener('drop', e => {
+    e.preventDefault();
+    dropArea.classList.remove('drag-over');
+    const file = e.dataTransfer.files[0];
+    if (file) loadPreview(file);
+  });
+
+  function loadPreview(file) {
+    selectedFile = file;
+    const reader = new FileReader();
+    reader.onload = e => {
+      previewImg.src = e.target.result;
+      dropArea.style.display = 'none';
+      previewWrap.style.display = 'block';
+      btnAnalyze.disabled = false;
+      errorBox.style.display = 'none';
+      results.style.display = 'none';
+      loading.style.display = 'none';
+    };
+    reader.readAsDataURL(file);
+  }
+
+  function resetUpload() {
+    fileInput.value = '';
+    selectedFile = null;
+    dropArea.style.display = 'block';
+    previewWrap.style.display = 'none';
+    btnAnalyze.disabled = true;
+    results.style.display = 'none';
+    errorBox.style.display = 'none';
+  }
+
+  function resetAll() {
+    resetUpload();
+    results.style.display = 'none';
+    loading.style.display = 'none';
+  }
+
+  // Loading messages to cycle through
+  const loadingMessages = [
+    'Sending image to AI...',
+    'Identifying plant species...',
+    'Checking health indicators...',
+    'Generating diagnosis...'
+  ];
+
+  async function analyze() {
+    if (!selectedFile) return;
+
+    // Show loading
+    results.style.display = 'none';
+    errorBox.style.display = 'none';
+    loading.style.display = 'block';
+    btnAnalyze.disabled = true;
+
+    // Cycle loading messages
+    let msgIndex = 0;
+    const msgInterval = setInterval(() => {
+      msgIndex = (msgIndex + 1) % loadingMessages.length;
+      loadingStep.textContent = loadingMessages[msgIndex];
+    }, 2000);
+
+    try {
+      const formData = new FormData();
+      formData.append('image', selectedFile);
+
+      const response = await fetch(API_URL, {
+        method: 'POST',
+        body: formData
+      });
+
+      clearInterval(msgInterval);
+
+      if (!response.ok) {
+        throw new Error(`Server error: ${response.status}`);
+      }
+
+      const data = await response.json();
+
+      if (data.error) {
+        throw new Error(data.error);
+      }
+
+      showResults(data);
+
+    } catch (err) {
+      clearInterval(msgInterval);
+      loading.style.display = 'none';
+      btnAnalyze.disabled = false;
+      errorBox.style.display = 'block';
+      errorBox.textContent = '❌ ' + (err.message || 'Something went wrong. Make sure your server is running.');
+    }
+  }
+
+  function showResults(data) {
+    loading.style.display = 'none';
+
+    // Plant name & scientific name
+    document.getElementById('res-name').textContent = data.plant_name || 'Unknown Plant';
+    document.getElementById('res-sci').textContent = data.scientific_name || '';
+    document.getElementById('res-conf').textContent = (data.confidence || '?') + '% match';
+
+    // Watering
+    const waterEl = document.getElementById('res-water');
+    if (data.needs_water) {
+      waterEl.innerHTML = '<span class="dot dot-amber"></span> Needed';
+    } else {
+      waterEl.innerHTML = '<span class="dot dot-green"></span> Not needed';
+    }
+
+    // Health
+    const healthEl = document.getElementById('res-health');
+    const statusColors = { healthy: 'dot-green', stressed: 'dot-amber', sick: 'dot-red' };
+    const dotClass = statusColors[data.health_status] || 'dot-amber';
+    const statusText = (data.health_status || 'unknown').charAt(0).toUpperCase() + data.health_status.slice(1);
+    healthEl.innerHTML = `<span class="dot ${dotClass}"></span> ${statusText}`;
+
+    // Tip
+    document.getElementById('res-tip').textContent = data.free_tip || 'Keep monitoring your plant regularly.';
+
+    // Disease box
+    const diseaseBox = document.getElementById('disease-box');
+    if (data.disease_found && data.disease_name) {
+      diseaseBox.style.display = 'block';
+      document.getElementById('disease-title').textContent = '⚠️ ' + data.disease_name;
+      document.getElementById('disease-treatment').textContent = data.treatment || 'Upgrade to Pro for full treatment plan.';
+    } else {
+      diseaseBox.style.display = 'none';
+    }
+
+    results.style.display = 'block';
+  }
+</script>
+</body>
+</html>
